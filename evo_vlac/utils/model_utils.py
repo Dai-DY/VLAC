@@ -23,6 +23,10 @@ from scipy.spatial import cKDTree
 from scipy.stats import spearmanr
 import random
 import numpy as np
+import requests
+import base64
+from io import BytesIO
+import re
 
 def clip_one(image):
     width, height = image.size
