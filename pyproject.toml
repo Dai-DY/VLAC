@@ -22,9 +22,13 @@ classifiers = [
 license = "Apache-2.0"
 requires-python = ">=3.8"
 dependencies = [
-    "ms-swift==3.3",
-    "transformers>=4.51.0",
-    "peft>=0.15.2"
+"ms-swift==3.3",
+"transformers>=4.51.0",
+"peft>=0.15.2",
+"opencv-python",
+"loguru",
+"timm",
+"flash-attn"
 ]
 
 [project.urls]
