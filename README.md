@@ -166,11 +166,11 @@ For training code, please refer to [InternVL2](https://huggingface.co/OpenGVLab/
 If you find our work helpful, please cite:
 
 ```bibtex
-@misc{VLAC2025,
-    title = {A Vision-Language-Action-Critic Model for Robotic Real-World Reinforcement Learning},
-    author = {Shanghai AI lab},
-    year = {2025},
-    booktitle={arXiv},
+@article{zhai2025vision,
+  title={A Vision-Language-Action-Critic Model for Robotic Real-World Reinforcement Learning},
+  author={Zhai, Shaopeng and Zhang, Qi and Zhang, Tianyi and Huang, Fuxian and Zhang, Haoran and Zhou, Ming and Zhang, Shengzhe and Liu, Litao and Lin, Sixu and Pang, Jiangmiao},
+  journal={arXiv preprint arXiv:2509.15937},
+  year={2025}
 }
 ```
 
