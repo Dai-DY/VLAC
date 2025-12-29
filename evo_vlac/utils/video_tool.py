@@ -751,6 +751,61 @@ def compress_video(input_path, output_path, target_size=(448, 448), fps=5):
     压缩视频到指定大小和帧率
     如果原视频fps小于指定值则保持原帧率
     """
+    # 尝试使用 ffprobe 获取视频信息
+    try:
+        cmd = [
+            'ffprobe', 
+            '-v', 'error', 
+            '-select_streams', 'v:0', 
+            '-show_entries', 'stream=width,height,r_frame_rate', 
+            '-of', 'json', 
+            input_path
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        info = json.loads(result.stdout)
+        stream = info['streams'][0]
+        original_width = int(stream['width'])
+        original_height = int(stream['height'])
+        fps_str = stream['r_frame_rate']
+        if '/' in fps_str:
+            num, den = map(int, fps_str.split('/'))
+            original_fps = num / den
+        else:
+            original_fps = float(fps_str)
+    except Exception as e:
+        logger.warning(f"Failed to get video info with ffprobe: {e}, falling back to opencv")
+        cap = cv2.VideoCapture(input_path)
+        original_fps = cap.get(cv2.CAP_PROP_FPS)
+        original_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        original_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        cap.release()
+
+    # 如果原始帧率小于指定帧率，则使用原始帧率
+    output_fps = original_fps if original_fps < fps else fps
+    
+    if target_size is None:
+        target_width, target_height = original_width, original_height
+    else:
+        target_width, target_height = target_size
+
+    # 使用 ffmpeg 进行压缩和转码
+    try:
+        cmd = [
+            'ffmpeg',
+            '-y',
+            '-i', input_path,
+            '-vf', f'fps={output_fps},scale={target_width}:{target_height}',
+            '-c:v', 'libx264',
+            '-pix_fmt', 'yuv420p',
+            '-loglevel', 'error',
+            output_path
+        ]
+        subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return output_path, output_fps
+    except subprocess.CalledProcessError as e:
+        logger.error(f"FFmpeg failed: {e.stderr.decode()}")
+        logger.info("Falling back to OpenCV implementation...")
+
     cap = cv2.VideoCapture(input_path)
     
     # 获取原始视频的帧率和尺寸

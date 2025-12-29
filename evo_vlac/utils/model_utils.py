@@ -74,8 +74,8 @@ class GAC_model():
         self.dataclient=DataProcessor()
         self.dataclient.prompt_templete['v3']="Image-1: <image>\nImage-2: <image>\nCompare two images and evaluate whether the second image is closer to achieving task objectives compared to the first image. + score means the second image is closer, - score means the first image is closer\nResponse the relative progressing of target task follow <score>. The target task is: <task> {} </task> <score>"
         self.dataclient.prompt_templete['v3_think']="0% <image>\nThis image is the trajectory beginning of the following two images\nImage-1: <image>\nImage-2: <image>\nCompare two images and evaluate whether the second image is closer to achieving task objectives compared to the first image. + score means the second image is closer, - score means the first image is closer\nResponse the relative progressing of target task follow <score>. The target task is: <task> {} </task> <score>"
-        self.dataclient.prompt_templete['v3_stages']="Image-1: <image>\nImage-2: <image>\nCompare two images and evaluate whether the second image is closer to achieving task objectives compared to the first image. + score means the second image is closer, - score means the first image is closer\nResponse the relative progressing of target task follow <score>. The target task is: <task> {} </task>\nThe task consists of the following stages:\n{}\nEvaluate the progress considering the current stage. <score>"
-        self.dataclient.prompt_templete['v3_think_stages']="0% <image>\nThis image is the trajectory beginning of the following two images\nImage-1: <image>\nImage-2: <image>\nCompare two images and evaluate whether the second image is closer to achieving task objectives compared to the first image. + score means the second image is closer, - score means the first image is closer\nResponse the relative progressing of target task follow <score>. The target task is: <task> {} </task>\nThe task consists of the following stages:\n{}\nEvaluate the progress considering the current stage. <score>"
+        self.dataclient.prompt_templete['v3_stages']="Image-1: <image>\nImage-2: <image>\nCompare two images and evaluate whether the second image is closer to achieving task objectives compared to the first image. + score means the second image is closer, - score means the first image is closer\nResponse the relative progressing of target task follow <score>. The target task is: <task> {} </task>\nThe task consists of the following stages:\n{}\nEvaluate the progress considering the current stage. Pay attention to the gripper status and arm movement. 1. Approaching the object with an OPEN gripper is correct (positive score). 2. Approaching with a CLOSED gripper requires opening it next. 3. Moving away with a CLOSED but EMPTY gripper (failed pick) is a failure (negative score). <score>"
+        self.dataclient.prompt_templete['v3_think_stages']="0% <image>\nThis image is the trajectory beginning of the following two images\nImage-1: <image>\nImage-2: <image>\nCompare two images and evaluate whether the second image is closer to achieving task objectives compared to the first image. + score means the second image is closer, - score means the first image is closer\nResponse the relative progressing of target task follow <score>. The target task is: <task> {} </task>\nThe task consists of the following stages:\n{}\nEvaluate the progress considering the current stage. Pay attention to the gripper status and arm movement. 1. Approaching the object with an OPEN gripper is correct (positive score). 2. Approaching with a CLOSED gripper requires opening it next. 3. Moving away with a CLOSED but EMPTY gripper (failed pick) is a failure (negative score). <score>"
 
 
 
@@ -498,6 +498,20 @@ class GAC_model():
         return answers_list
 
     
+    def smooth_values(self, data, window_size=3):
+        if not data:
+            return data
+        if len(data) < window_size:
+            return data
+        
+        result = []
+        for i in range(len(data)):
+            start = max(0, i - window_size // 2)
+            end = min(len(data), i + window_size // 2 + 1)
+            window = data[start:end]
+            result.append(sum(window) / len(window))
+        return result
+
     def get_trajectory_done(self,task:str,image_list:List[Image.Image],ref_image_list:List[Image.Image]=None,batch_num:int=20,rich=False,ref_num=9,threshold=0,skip=1,goal_image:Image.Image=None):
         """
         输入一条trajectory的所有图片,输出每张图片的done,0~1的突变值
@@ -632,6 +646,7 @@ class GAC_model():
             else:
                 critic_list=[float(one)/skip for one in critic_list]
             critic_list=[float(one)/addition_scale for one in critic_list]
+            critic_list=self.smooth_values(critic_list)
             value_list=self.critic_to_value_simple(critic_list,simple=value_simple)
         else:
             if reverse_eval:
@@ -641,6 +656,7 @@ class GAC_model():
             else:
                 critic_list=[float(one)/skip for one in critic_list]
             critic_list=[float(one)/addition_scale for one in critic_list]
+            critic_list=self.smooth_values(critic_list)
             value_list=self.critic_to_value_simple(critic_list,simple=value_simple)
         if related_critic:
             critic_list=[value_list[i]-value_list[i-1] for i in range(1,len(value_list))]
