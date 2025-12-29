@@ -9,9 +9,9 @@ model_path="~/gpufree-data/model/VLAC"
 
 #assign video path and task description
 test_video='./videos/pick-bowl-test.mp4'
-# ref_video='./videos/pick-bowl-ref.mov'
-ref_video = None
-task_description='Put up the bowl and place it back in the white storage box.'
+ref_video='./videos/pick-bowl-ref.mov'
+# ref_video = None
+task_description='Pick up the bowl and place it back in the white storage box.'
 
 #init model
 Critic=GAC_model(tag='critic')
@@ -37,13 +37,13 @@ result_path,value_list,critic_list,done_list = Critic.web_trajectory_critic(
     reference_video_path=reference_video_compressed,#if None means no reference video, only use task_description to indicate the task
     batch_num=5,#batch number
     ref_num=6,#image number used in reference video
-    think=True,# whether to CoT
+    think=False,# whether to CoT
     skip=5,#pair-wise step
     rich=False,#whether to output decimal value
     reverse_eval=False,#whether to reverse the evaluation(for VROC evaluation)
     output_path="results",
     fps=float(output_fps),
-    frame_skip=False,#whether to skip frames(if false, each frame while be evaluated, cost more time)
+    frame_skip=True,#whether to skip frames(if false, each frame while be evaluated, cost more time)
     done_flag=False,#whether to out put done value
     in_context_done=False,#whether use reference video to generate done value
     done_threshold=0.9,#done threshold

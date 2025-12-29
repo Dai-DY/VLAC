@@ -15,6 +15,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from data_processing_vlm import DataProcessor,trojectory_example_prompt,denormalize_with_params
 from video_tool import images_get_from_video, video_trajectory
+from segment import decompose_instruction
 import tqdm
 import math
 from collections import defaultdict
@@ -73,6 +74,10 @@ class GAC_model():
         self.dataclient=DataProcessor()
         self.dataclient.prompt_templete['v3']="Image-1: <image>\nImage-2: <image>\nCompare two images and evaluate whether the second image is closer to achieving task objectives compared to the first image. + score means the second image is closer, - score means the first image is closer\nResponse the relative progressing of target task follow <score>. The target task is: <task> {} </task> <score>"
         self.dataclient.prompt_templete['v3_think']="0% <image>\nThis image is the trajectory beginning of the following two images\nImage-1: <image>\nImage-2: <image>\nCompare two images and evaluate whether the second image is closer to achieving task objectives compared to the first image. + score means the second image is closer, - score means the first image is closer\nResponse the relative progressing of target task follow <score>. The target task is: <task> {} </task> <score>"
+        self.dataclient.prompt_templete['v3_stages']="Image-1: <image>\nImage-2: <image>\nCompare two images and evaluate whether the second image is closer to achieving task objectives compared to the first image. + score means the second image is closer, - score means the first image is closer\nResponse the relative progressing of target task follow <score>. The target task is: <task> {} </task>\nThe task consists of the following stages:\n{}\nEvaluate the progress considering the current stage. <score>"
+        self.dataclient.prompt_templete['v3_think_stages']="0% <image>\nThis image is the trajectory beginning of the following two images\nImage-1: <image>\nImage-2: <image>\nCompare two images and evaluate whether the second image is closer to achieving task objectives compared to the first image. + score means the second image is closer, - score means the first image is closer\nResponse the relative progressing of target task follow <score>. The target task is: <task> {} </task>\nThe task consists of the following stages:\n{}\nEvaluate the progress considering the current stage. <score>"
+
+
 
 
     def _songling_process(self,action):
@@ -97,13 +102,21 @@ class GAC_model():
             state[6]=state[6]//1000
         return state
 
-    def get_score_prompt(self,task,trajectory_len=0,think=False):
+    def get_score_prompt(self,task,trajectory_len=0,think=False,stages=None):
         "two or len+3 image"
-        if trajectory_len>0:
-            trajectory_prompt=trojectory_example_prompt(list(range(trajectory_len)),task=task)
-            full_prompt=trajectory_prompt+self.dataclient.prompt_templete['v3_think'].format(task)
+        if stages:
+            stages_str = "\n".join([f"{i+1}. {s}" for i, s in enumerate(stages)])
+            if trajectory_len>0:
+                trajectory_prompt=trojectory_example_prompt(list(range(trajectory_len)),task=task)
+                full_prompt=trajectory_prompt+self.dataclient.prompt_templete['v3_think_stages'].format(task, stages_str)
+            else:
+                full_prompt=self.dataclient.prompt_templete['v3_stages'].format(task, stages_str)
         else:
-            full_prompt=self.dataclient.prompt_templete['v3'].format(task)
+            if trajectory_len>0:
+                trajectory_prompt=trojectory_example_prompt(list(range(trajectory_len)),task=task)
+                full_prompt=trajectory_prompt+self.dataclient.prompt_templete['v3_think'].format(task)
+            else:
+                full_prompt=self.dataclient.prompt_templete['v3'].format(task)
         if think:
             full_prompt+=self.dataclient.prompt_templete['think']
         return full_prompt
@@ -552,6 +565,16 @@ class GAC_model():
         batch_image=[]
         critic_list=[]
         value_list=[]
+        
+        # Decompose task
+        try:
+            stages = decompose_instruction(task)
+            if len(stages) <= 1:
+                stages = None
+        except Exception as e:
+            print(f"Warning: Task decomposition failed: {e}")
+            stages = None
+
         if ref_image_list is not None:
             ref_images=[ref_image_list[0]]
             delta=(len(ref_image_list)-1)/(ref_num-1)
@@ -564,7 +587,7 @@ class GAC_model():
         else:
             select_idx=range(skip,len(image_list))
         for i in tqdm.tqdm(select_idx,desc='critic processing'):
-            one_prompt=self.get_score_prompt(task=task,trajectory_len=ref_num,think=think)
+            one_prompt=self.get_score_prompt(task=task,trajectory_len=ref_num,think=think,stages=stages)
             batch_prompt.append(one_prompt)
             if ref_image_list is not None:
                 if reverse_eval:
