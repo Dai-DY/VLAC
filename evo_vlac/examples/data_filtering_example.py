@@ -5,7 +5,7 @@ import os
 
 
 #assign local model path
-model_path="set to your local model path"
+model_path="~/gpufree-data/model/VLAC"
 
 #assign video path and task description
 test_video='./videos/pick-bowl-test.mp4'

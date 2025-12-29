@@ -3,3 +3,6 @@ __pycache__/
 *$py.class
 evo_vlac.egg-info/
 build/
+/flash_attn-2.6.3+cu128torch2.7-cp310-cp310-linux_x86_64.whl
+evo_vlac/examples/results/
+evo_vlac/examples/videos/
